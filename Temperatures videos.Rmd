@@ -17,6 +17,26 @@ library(ggpmisc)
 ```
 
 
+# Slopes (ramping rates) of trials (obtained from a separate R script, on the water bath test folder):
+
+Trial 1: 0.221049094097019   
+
+Trial 2: 0.259851964041431  
+
+Trial 3: 0.248251646648586  
+
+Trial 4: 0.251144068542848 
+
+Trial 5: 0.247288298521832 
+
+Trial 6: 0.253605358743337 
+
+Trial 7: 0.249462545656051 
+
+Trial 8: 0.250257891667274  
+
+Trial 9: 0.254364104101946 
+
 # Test run: Trial 7
 ```{r}
 
@@ -111,7 +131,7 @@ final<-(fhour*3600)+(fmin*60)+fsecs+1
 
 
 #Defining the intercept
-int<-t1-((0.25/60)*inicia)
+int<-t1-((0.248251646648586/60)*inicia)
 
 # Creating a sequence
 seconds<-as.data.frame(seq(from=inicia, to=final, by=1)) #Creates a sequence of 1 second intervals
@@ -121,7 +141,7 @@ colnames(seconds)<-"sec" #Changes column name to seconds
 seconds$sec.dec<-seconds$sec*(1/60) # Transforms seconds to decimal values
 
 # Estimating the temperature per each decimal second
-seconds$temp<-(int+((0.25)*seconds$sec.dec)) #Estimates temperature at each second (using the corrected decimal values)
+seconds$temp<-(int+((0.248251646648586)*seconds$sec.dec)) #Estimates temperature at each second (using the corrected decimal values)
  
 #seconds$temp2<-(int+((0.25/60)*seconds$sec)) #Estimates temperature at each second (using the regular second but correcting the slope value by converting it to decimals), it gives the same result as above 
 
@@ -169,6 +189,547 @@ verif<-left_join(video, seconds.complete, by="sec") %>%
   mutate(diffs=temp.video-temp.est, diffs.abs=abs(diffs)) %>%
   filter(!sec==1091)
 
+#Checking what is the average error difference  
+mean(verif$diffs.abs)
+sd(verif$diffs.abs)
+
+#Checking what is the average error difference for just the ones where I know the exact point in time where the temperature changed
+verif2<-verif %>%
+  filter(obs=="EV")
+mean(verif2$diffs.abs)
+sd(verif2$diffs.abs)
+
+```
+
+# Trial 4
+```{r}
+
+#Temperature of first EV *(EV=exact voice, moment where I exactly said on the video that the aluminum reached that temperature, normally at 28C but in some trials it varied a bit)
+t1<-40
+
+# Setting up initial and final values
+## Minutes and seconds when the video reached the t1
+min<-17
+secs<- 11 
+inicia<-(min*60)+secs 
+
+#Correcting the time at which it reached 40, since I have the direct observation for this temp (EV)
+fhour<-1
+fmin<-4
+fsecs<-55  
+inicia2<-(fhour*3600)+(fmin*60)+fsecs+1
+
+
+## Hour, minute and seconds when the video ends
+fhour<-1
+fmin<-45
+fsecs<-1  
+final<-(fhour*3600)+(fmin*60)+fsecs+1
+
+
+#Defining the intercept
+int<-t1-((0.251144068542848/60)*inicia2)
+
+# Creating a sequence
+seconds<-as.data.frame(seq(from=inicia, to=final, by=1)) #Creates a sequence of 1 second intervals
+colnames(seconds)<-"sec" #Changes column name to seconds
+
+# Converting seconds to decimal values
+seconds$sec.dec<-seconds$sec*(1/60) # Transforms seconds to decimal values
+
+# Estimating the temperature per each decimal second
+seconds$temp<-(int+((0.251144068542848)*seconds$sec.dec)) #Estimates temperature at each second (using the corrected decimal values)
+ 
+#seconds$temp2<-(int+((0.25/60)*seconds$sec)) #Estimates temperature at each second (using the regular second but correcting the slope value by converting it to decimals), it gives the same result as above 
+
+
+#Extracting the data every minute
+minutes<-seconds %>%
+  slice(which(row_number() %% 60 == 1))
+
+#checking that the slope of the line is still 0.25C per minute
+lm(temp~sec.dec, data=minutes)
+lm(temp~sec.dec, data=seconds)
+
+slopes=coef(lm(temp~sec.dec,data=minutes))[2] 
+
+ggplot(data=seconds, aes( x=sec.dec, y=temp))+
+  geom_point() + 
+  theme_bw()+
+  stat_poly_line() +
+  stat_poly_eq(use_label(c("eq", "R2"))) 
+
+ggplot(data=minutes, aes( x=sec.dec, y=temp))+
+  geom_point() + 
+  theme_bw()+
+  stat_poly_line() +
+  stat_poly_eq(use_label(c("eq", "R2"))) 
+
+# Create a sequence to fill up the missing values from the beining of the video
+seconds2<-as.data.frame(seq(from=0, to=inicia-1, by=1)) #Creates a sequence of 1 second intervals
+colnames(seconds2)<-"sec" #Changes column name to seconds
+seconds2$sec.dec<-seconds2$sec*(1/60) # Transforms seconds to decimal values
+seconds2$temp<-27 #Estimates temperature at each second (using the corrected decimal values)
+
+seconds.complete<-rbind(seconds2,seconds)
+
+write.table(seconds.complete, "Generated files/trial4.txt",sep="\t",row.names=FALSE)
+
+
+# Checking temperatures with video comments
+video<-read.csv("Temperatures from audio videos.csv")
+
+video<-video %>% filter(Trial==4)
+
+verif<-left_join(video, seconds.complete, by="sec") %>%
+  rename(sec.dec.vid=sec.dec.x, temp.video=temp.x, sec.dec.est=sec.dec.y, temp.est=temp.y) %>%
+  mutate(diffs=temp.video-temp.est, diffs.abs=abs(diffs)) 
+  
+#Checking what is the average error difference  
+mean(verif$diffs.abs)
+sd(verif$diffs.abs)
+
+#Checking what is the average error difference for just the ones where I know the exact point in time where the temperature changed
+verif2<-verif %>%
+  filter(obs=="EV")
+mean(verif2$diffs.abs)
+sd(verif2$diffs.abs)
+
+```
+
+# Trial 5
+```{r}
+
+#Temperature of first EV *(EV=exact voice, moment where I exactly said on the video that the aluminum reached that temperature, normally at 28C but in some trials it varied a bit)
+t1<-28
+
+# Setting up initial and final values
+## Minutes and seconds when the video reached the t1
+min<-17
+secs<- 55 
+inicia<-(min*60)+secs 
+
+## Hour, minute and seconds when the video ends
+fhour<-1
+fmin<-47
+fsecs<-36  
+final<-(fhour*3600)+(fmin*60)+fsecs+1
+
+
+#Defining the intercept
+int<-t1-((0.247288298521832/60)*inicia)
+
+# Creating a sequence
+seconds<-as.data.frame(seq(from=inicia, to=final, by=1)) #Creates a sequence of 1 second intervals
+colnames(seconds)<-"sec" #Changes column name to seconds
+
+# Converting seconds to decimal values
+seconds$sec.dec<-seconds$sec*(1/60) # Transforms seconds to decimal values
+
+# Estimating the temperature per each decimal second
+seconds$temp<-(int+((0.247288298521832)*seconds$sec.dec)) #Estimates temperature at each second (using the corrected decimal values)
+ 
+#seconds$temp2<-(int+((0.25/60)*seconds$sec)) #Estimates temperature at each second (using the regular second but correcting the slope value by converting it to decimals), it gives the same result as above 
+
+
+#Extracting the data every minute
+minutes<-seconds %>%
+  slice(which(row_number() %% 60 == 1))
+
+#checking that the slope of the line is still 0.25C per minute
+lm(temp~sec.dec, data=minutes)
+lm(temp~sec.dec, data=seconds)
+
+slopes=coef(lm(temp~sec.dec,data=minutes))[2] 
+
+ggplot(data=seconds, aes( x=sec.dec, y=temp))+
+  geom_point() + 
+  theme_bw()+
+  stat_poly_line() +
+  stat_poly_eq(use_label(c("eq", "R2"))) 
+
+ggplot(data=minutes, aes( x=sec.dec, y=temp))+
+  geom_point() + 
+  theme_bw()+
+  stat_poly_line() +
+  stat_poly_eq(use_label(c("eq", "R2"))) 
+
+# Create a sequence to fill up the missing values from the beining of the video
+seconds2<-as.data.frame(seq(from=0, to=inicia-1, by=1)) #Creates a sequence of 1 second intervals
+colnames(seconds2)<-"sec" #Changes column name to seconds
+seconds2$sec.dec<-seconds2$sec*(1/60) # Transforms seconds to decimal values
+seconds2$temp<-27 #Estimates temperature at each second (using the corrected decimal values)
+
+seconds.complete<-rbind(seconds2,seconds)
+
+write.table(seconds.complete, "Generated files/trial5.txt",sep="\t",row.names=FALSE)
+
+
+# Checking temperatures with video comments
+video<-read.csv("Temperatures from audio videos.csv")
+
+video<-video %>% filter(Trial==5)
+
+verif<-left_join(video, seconds.complete, by="sec") %>%
+  rename(sec.dec.vid=sec.dec.x, temp.video=temp.x, sec.dec.est=sec.dec.y, temp.est=temp.y) %>%
+  mutate(diffs=temp.video-temp.est, diffs.abs=abs(diffs)) 
+  
+#Checking what is the average error difference  
+mean(verif$diffs.abs)
+sd(verif$diffs.abs)
+
+#Checking what is the average error difference for just the ones where I know the exact point in time where the temperature changed
+verif2<-verif %>%
+  filter(obs=="EV")
+mean(verif2$diffs.abs)
+sd(verif2$diffs.abs)
+
+```
+
+# Trial 6
+```{r}
+
+#Temperature of first EV *(EV=exact voice, moment where I exactly said on the video that the aluminum reached that temperature, normally at 28C but in some trials it varied a bit)
+t1<-28
+
+# Setting up initial and final values
+## Minutes and seconds when the video reached the t1
+min<-17
+secs<- 55 
+inicia<-(min*60)+secs 
+
+## Hour, minute and seconds when the video ends
+fhour<-1
+fmin<-44
+fsecs<-44  
+final<-(fhour*3600)+(fmin*60)+fsecs+1
+
+
+#Defining the intercept
+int<-t1-((0.253605358743337/60)*inicia)
+
+# Creating a sequence
+seconds<-as.data.frame(seq(from=inicia, to=final, by=1)) #Creates a sequence of 1 second intervals
+colnames(seconds)<-"sec" #Changes column name to seconds
+
+# Converting seconds to decimal values
+seconds$sec.dec<-seconds$sec*(1/60) # Transforms seconds to decimal values
+
+# Estimating the temperature per each decimal second
+seconds$temp<-(int+((0.253605358743337)*seconds$sec.dec)) #Estimates temperature at each second (using the corrected decimal values)
+ 
+#seconds$temp2<-(int+((0.25/60)*seconds$sec)) #Estimates temperature at each second (using the regular second but correcting the slope value by converting it to decimals), it gives the same result as above 
+
+
+#Extracting the data every minute
+minutes<-seconds %>%
+  slice(which(row_number() %% 60 == 1))
+
+#checking that the slope of the line is still 0.25C per minute
+lm(temp~sec.dec, data=minutes)
+lm(temp~sec.dec, data=seconds)
+
+slopes=coef(lm(temp~sec.dec,data=minutes))[2] 
+
+ggplot(data=seconds, aes( x=sec.dec, y=temp))+
+  geom_point() + 
+  theme_bw()+
+  stat_poly_line() +
+  stat_poly_eq(use_label(c("eq", "R2"))) 
+
+ggplot(data=minutes, aes( x=sec.dec, y=temp))+
+  geom_point() + 
+  theme_bw()+
+  stat_poly_line() +
+  stat_poly_eq(use_label(c("eq", "R2"))) 
+
+# Create a sequence to fill up the missing values from the beining of the video
+seconds2<-as.data.frame(seq(from=0, to=inicia-1, by=1)) #Creates a sequence of 1 second intervals
+colnames(seconds2)<-"sec" #Changes column name to seconds
+seconds2$sec.dec<-seconds2$sec*(1/60) # Transforms seconds to decimal values
+seconds2$temp<-27 #Estimates temperature at each second (using the corrected decimal values)
+
+seconds.complete<-rbind(seconds2,seconds)
+
+write.table(seconds.complete, "Generated files/trial6.txt",sep="\t",row.names=FALSE)
+
+
+# Checking temperatures with video comments
+video<-read.csv("Temperatures from audio videos.csv")
+
+video<-video %>% filter(Trial==6)
+
+verif<-left_join(video, seconds.complete, by="sec") %>%
+  rename(sec.dec.vid=sec.dec.x, temp.video=temp.x, sec.dec.est=sec.dec.y, temp.est=temp.y) %>%
+  mutate(diffs=temp.video-temp.est, diffs.abs=abs(diffs)) 
+  
+#Checking what is the average error difference  
+mean(verif$diffs.abs)
+sd(verif$diffs.abs)
+
+#Checking what is the average error difference for just the ones where I know the exact point in time where the temperature changed
+verif2<-verif %>%
+  filter(obs=="EV")
+mean(verif2$diffs.abs)
+sd(verif2$diffs.abs)
+
+```
+
+# Trial 7
+```{r}
+
+#Temperature of first EV *(EV=exact voice, moment where I exactly said on the video that the aluminum reached that temperature, normally at 28C but in some trials it varied a bit)
+t1<-28
+
+# Setting up initial and final values
+## Minutes and seconds when the video reached the t1
+min<-17
+secs<- 52 
+inicia<-(min*60)+secs 
+
+## Hour, minute and seconds when the video ends
+fhour<-1
+fmin<-46
+fsecs<-29  
+final<-(fhour*3600)+(fmin*60)+fsecs+1
+
+
+#Defining the intercept
+int<-t1-((0.249462545656051/60)*inicia)
+
+# Creating a sequence
+seconds<-as.data.frame(seq(from=inicia, to=final, by=1)) #Creates a sequence of 1 second intervals
+colnames(seconds)<-"sec" #Changes column name to seconds
+
+# Converting seconds to decimal values
+seconds$sec.dec<-seconds$sec*(1/60) # Transforms seconds to decimal values
+
+# Estimating the temperature per each decimal second
+seconds$temp<-(int+((0.249462545656051)*seconds$sec.dec)) #Estimates temperature at each second (using the corrected decimal values)
+ 
+#seconds$temp2<-(int+((0.25/60)*seconds$sec)) #Estimates temperature at each second (using the regular second but correcting the slope value by converting it to decimals), it gives the same result as above 
+
+
+#Extracting the data every minute
+minutes<-seconds %>%
+  slice(which(row_number() %% 60 == 1))
+
+#checking that the slope of the line is still 0.25C per minute
+lm(temp~sec.dec, data=minutes)
+lm(temp~sec.dec, data=seconds)
+
+slopes=coef(lm(temp~sec.dec,data=minutes))[2] 
+
+ggplot(data=seconds, aes( x=sec.dec, y=temp))+
+  geom_point() + 
+  theme_bw()+
+  stat_poly_line() +
+  stat_poly_eq(use_label(c("eq", "R2"))) 
+
+ggplot(data=minutes, aes( x=sec.dec, y=temp))+
+  geom_point() + 
+  theme_bw()+
+  stat_poly_line() +
+  stat_poly_eq(use_label(c("eq", "R2"))) 
+
+# Create a sequence to fill up the missing values from the beining of the video
+seconds2<-as.data.frame(seq(from=0, to=inicia-1, by=1)) #Creates a sequence of 1 second intervals
+colnames(seconds2)<-"sec" #Changes column name to seconds
+seconds2$sec.dec<-seconds2$sec*(1/60) # Transforms seconds to decimal values
+seconds2$temp<-27 #Estimates temperature at each second (using the corrected decimal values)
+
+seconds.complete<-rbind(seconds2,seconds)
+
+write.table(seconds.complete, "Generated files/trial7.txt",sep="\t",row.names=FALSE)
+
+
+# Checking temperatures with video comments
+video<-read.csv("Temperatures from audio videos.csv")
+
+video<-video %>% filter(Trial==7)
+
+verif<-left_join(video, seconds.complete, by="sec") %>%
+  rename(sec.dec.vid=sec.dec.x, temp.video=temp.x, sec.dec.est=sec.dec.y, temp.est=temp.y) %>%
+  mutate(diffs=temp.video-temp.est, diffs.abs=abs(diffs)) 
+  
+#Checking what is the average error difference  
+mean(verif$diffs.abs)
+sd(verif$diffs.abs)
+
+#Checking what is the average error difference for just the ones where I know the exact point in time where the temperature changed
+verif2<-verif %>%
+  filter(obs=="EV")
+mean(verif2$diffs.abs)
+sd(verif2$diffs.abs)
+
+```
+
+# Trial 8
+```{r}
+
+#Temperature of first EV *(EV=exact voice, moment where I exactly said on the video that the aluminum reached that temperature, normally at 28C but in some trials it varied a bit)
+t1<-28.5
+
+# Setting up initial and final values
+## Minutes and seconds when the video reached the t1
+min<-19
+secs<- 58 
+inicia<-(min*60)+secs 
+
+## Hour, minute and seconds when the video ends
+fhour<-1
+fmin<-46
+fsecs<-9  
+final<-(fhour*3600)+(fmin*60)+fsecs+1
+
+
+#Defining the intercept
+int<-t1-((0.25/60)*inicia)
+
+# Creating a sequence
+seconds<-as.data.frame(seq(from=inicia, to=final, by=1)) #Creates a sequence of 1 second intervals
+colnames(seconds)<-"sec" #Changes column name to seconds
+
+# Converting seconds to decimal values
+seconds$sec.dec<-seconds$sec*(1/60) # Transforms seconds to decimal values
+
+# Estimating the temperature per each decimal second
+seconds$temp<-(int+((0.25)*seconds$sec.dec)) #Estimates temperature at each second (using the corrected decimal values)
+ 
+#seconds$temp2<-(int+((0.25/60)*seconds$sec)) #Estimates temperature at each second (using the regular second but correcting the slope value by converting it to decimals), it gives the same result as above 
+
+
+#Extracting the data every minute
+minutes<-seconds %>%
+  slice(which(row_number() %% 60 == 1))
+
+#checking that the slope of the line is still 0.25C per minute
+lm(temp~sec.dec, data=minutes)
+lm(temp~sec.dec, data=seconds)
+
+slopes=coef(lm(temp~sec.dec,data=minutes))[2] 
+
+ggplot(data=seconds, aes( x=sec.dec, y=temp))+
+  geom_point() + 
+  theme_bw()+
+  stat_poly_line() +
+  stat_poly_eq(use_label(c("eq", "R2"))) 
+
+ggplot(data=minutes, aes( x=sec.dec, y=temp))+
+  geom_point() + 
+  theme_bw()+
+  stat_poly_line() +
+  stat_poly_eq(use_label(c("eq", "R2"))) 
+
+# Create a sequence to fill up the missing values from the beining of the video
+seconds2<-as.data.frame(seq(from=0, to=inicia-1, by=1)) #Creates a sequence of 1 second intervals
+colnames(seconds2)<-"sec" #Changes column name to seconds
+seconds2$sec.dec<-seconds2$sec*(1/60) # Transforms seconds to decimal values
+seconds2$temp<-27 #Estimates temperature at each second (using the corrected decimal values)
+
+seconds.complete<-rbind(seconds2,seconds)
+
+write.table(seconds.complete, "Generated files/trial8.txt",sep="\t",row.names=FALSE)
+
+
+# Checking temperatures with video comments
+video<-read.csv("Temperatures from audio videos.csv")
+
+video<-video %>% filter(Trial==8)
+
+verif<-left_join(video, seconds.complete, by="sec") %>%
+  rename(sec.dec.vid=sec.dec.x, temp.video=temp.x, sec.dec.est=sec.dec.y, temp.est=temp.y) %>%
+  mutate(diffs=temp.video-temp.est, diffs.abs=abs(diffs)) 
+  
+#Checking what is the average error difference  
+mean(verif$diffs.abs)
+sd(verif$diffs.abs)
+
+#Checking what is the average error difference for just the ones where I know the exact point in time where the temperature changed
+verif2<-verif %>%
+  filter(obs=="EV")
+mean(verif2$diffs.abs)
+sd(verif2$diffs.abs)
+
+```
+
+# Trial 9
+```{r}
+
+#Temperature of first EV *(EV=exact voice, moment where I exactly said on the video that the aluminum reached that temperature, normally at 28C but in some trials it varied a bit)
+t1<-28
+
+# Setting up initial and final values
+## Minutes and seconds when the video reached the t1
+min<-19
+secs<- 58 
+inicia<-(min*60)+secs 
+
+## Hour, minute and seconds when the video ends
+fhour<-1
+fmin<-44
+fsecs<-37  
+final<-(fhour*3600)+(fmin*60)+fsecs+1
+
+
+#Defining the intercept
+int<-t1-((0.25/60)*inicia)
+
+# Creating a sequence
+seconds<-as.data.frame(seq(from=inicia, to=final, by=1)) #Creates a sequence of 1 second intervals
+colnames(seconds)<-"sec" #Changes column name to seconds
+
+# Converting seconds to decimal values
+seconds$sec.dec<-seconds$sec*(1/60) # Transforms seconds to decimal values
+
+# Estimating the temperature per each decimal second
+seconds$temp<-(int+((0.25)*seconds$sec.dec)) #Estimates temperature at each second (using the corrected decimal values)
+ 
+#seconds$temp2<-(int+((0.25/60)*seconds$sec)) #Estimates temperature at each second (using the regular second but correcting the slope value by converting it to decimals), it gives the same result as above 
+
+
+#Extracting the data every minute
+minutes<-seconds %>%
+  slice(which(row_number() %% 60 == 1))
+
+#checking that the slope of the line is still 0.25C per minute
+lm(temp~sec.dec, data=minutes)
+lm(temp~sec.dec, data=seconds)
+
+slopes=coef(lm(temp~sec.dec,data=minutes))[2] 
+
+ggplot(data=seconds, aes( x=sec.dec, y=temp))+
+  geom_point() + 
+  theme_bw()+
+  stat_poly_line() +
+  stat_poly_eq(use_label(c("eq", "R2"))) 
+
+ggplot(data=minutes, aes( x=sec.dec, y=temp))+
+  geom_point() + 
+  theme_bw()+
+  stat_poly_line() +
+  stat_poly_eq(use_label(c("eq", "R2"))) 
+
+# Create a sequence to fill up the missing values from the beining of the video
+seconds2<-as.data.frame(seq(from=0, to=inicia-1, by=1)) #Creates a sequence of 1 second intervals
+colnames(seconds2)<-"sec" #Changes column name to seconds
+seconds2$sec.dec<-seconds2$sec*(1/60) # Transforms seconds to decimal values
+seconds2$temp<-27 #Estimates temperature at each second (using the corrected decimal values)
+
+seconds.complete<-rbind(seconds2,seconds)
+
+write.table(seconds.complete, "Generated files/trial9.txt",sep="\t",row.names=FALSE)
+
+
+# Checking temperatures with video comments
+video<-read.csv("Temperatures from audio videos.csv")
+
+video<-video %>% filter(Trial==9)
+
+verif<-left_join(video, seconds.complete, by="sec") %>%
+  rename(sec.dec.vid=sec.dec.x, temp.video=temp.x, sec.dec.est=sec.dec.y, temp.est=temp.y) %>%
+  mutate(diffs=temp.video-temp.est, diffs.abs=abs(diffs)) 
+  
 #Checking what is the average error difference  
 mean(verif$diffs.abs)
 sd(verif$diffs.abs)
